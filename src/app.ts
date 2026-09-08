@@ -3,12 +3,12 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import routes from "./routes";
-import { errorHandler, notFoundHandler } from "./middlewares/error.middleware";
+import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
+import { successResponse } from "./utils/apiResponse";
 
 export const createApp = (): Application => {
   const app = express();
 
-  // Security & Utility Middlewares
   app.use(helmet());
   app.use(
     cors({
@@ -23,20 +23,16 @@ export const createApp = (): Application => {
     app.use(morgan("dev"));
   }
 
-  // Root endpoint
   app.get("/", (req, res) => {
-    res.json({
-      name: "Trao.ai Backend API",
+    return successResponse(res, "Trao.ai Backend API", {
       status: "online",
       version: "1.0.0",
       docs: "/api/health",
     });
   });
 
-  // API Routes
   app.use("/api", routes);
 
-  // 404 & Global Error Handling
   app.use(notFoundHandler);
   app.use(errorHandler);
 

@@ -55,11 +55,17 @@ backend/
 ├── src/
 │   ├── config/             # Configuration (e.g., MongoDB connection)
 │   │   └── db.ts
+│   ├── controllers/        # Request controllers
 │   ├── middlewares/        # Express middlewares (error handling, 404, etc.)
-│   │   └── error.middleware.ts
+│   ├── models/             # Mongoose schemas & TypeScript document types only
+│   │   └── user/
+│   ├── repositories/       # Database queries / operations (Repository pattern)
+│   │   └── user/
 │   ├── routes/             # Express API routes
 │   │   ├── health.routes.ts
 │   │   └── index.ts
+│   ├── services/           # Business logic services
+│   ├── utils/              # Utilities & response helpers
 │   ├── app.ts              # Express application factory & middleware setup
 │   └── index.ts            # Server entry point & graceful shutdown
 ├── .env.example            # Sample environment variables

@@ -9,7 +9,6 @@ import { connectDB } from "./config/db";
 const PORT = process.env.PORT || 5000;
 
 const startServer = async (): Promise<void> => {
-  // Connect to MongoDB
   await connectDB();
 
   const app = createApp();
@@ -20,7 +19,6 @@ const startServer = async (): Promise<void> => {
     console.log(`[server] Health check available at http://localhost:${PORT}/api/health`);
   });
 
-  // Graceful shutdown
   const gracefulShutdown = async (signal: string) => {
     console.log(`\n[server] Received ${signal}. Starting graceful shutdown...`);
 
