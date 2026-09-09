@@ -31,8 +31,11 @@ export const authMiddleware = (
     };
 
     next();
-  } catch (_error) {
-    return unauthorizedResponse(res, AUTH.tokenExpired);
+  } catch (error: any) {
+    if (error?.name === 'TokenExpiredError') {
+      return unauthorizedResponse(res, AUTH.tokenExpired);
+    }
+    return unauthorizedResponse(res, AUTH.invalidToken);
   }
 };
 

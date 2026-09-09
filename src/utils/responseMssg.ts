@@ -213,3 +213,20 @@ export const LLM = {
   quotaExceeded: "The AI service quota has been exceeded or the API key is invalid.",
   generalError: "Failed to generate response from the AI provider. Please try again."
 };
+
+export const KIT = {
+  createdSuccessfully: "Interview prep kit created successfully.",
+  retrievedSuccessfully: "Interview prep kit retrieved successfully.",
+  listRetrieved: "Interview prep kits retrieved successfully.",
+  updatedSuccessfully: "Interview prep kit updated successfully.",
+  deletedSuccessfully: "Interview prep kit deleted successfully.",
+  notFound: "Interview prep kit not found or unauthorized.",
+  questionNotFound: "Question not found in the prep kit.",
+  questionUpdatedSuccessfully: "Question updated successfully.",
+  questionDeletedSuccessfully: "Question removed from kit successfully.",
+  flashcardNotFound: "Flashcard not found in the prep kit.",
+  confidenceRecorded: "Flashcard confidence recorded successfully.",
+  invalidConfidence: "Invalid confidence value. Must be 'none', 'somewhat', or 'confident'.",
+  sectionRegenerated: (section: string) => `${section} regenerated successfully.`,
+};
+

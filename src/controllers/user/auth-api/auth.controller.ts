@@ -3,7 +3,8 @@ import { userRepository } from '../../../repositories/user';
 import { PasswordService } from '../../../services/auth/password.service';
 import { TokenService } from '../../../services/auth/token.service';
 import * as apiRes from '../../../utils/apiResponse';
-import { USER } from '../../../utils/responseMssg';
+import { USER, AUTH } from '../../../utils/responseMssg';
+
 
 export const signUp = async (req: Request, res: Response): Promise<Response> => {
   try {
@@ -72,3 +73,41 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     return apiRes.errorResponse(res, error);
   }
 };
+
+export const getMe = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const userId = req.user?.id || req.user?.userId;
+    if (!userId) {
+      return apiRes.unauthorizedResponse(res, AUTH.tokenRequired);
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      return apiRes.notFoundResponse(res, USER.accountNotExists);
+    }
+
+    if (!user.isActive) {
+      return apiRes.forbiddenResponse(res, USER.accountDeactivated);
+    }
+
+    return apiRes.successResponse(res, 'User session verified successfully', {
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    return apiRes.errorResponse(res, error);
+  }
+};
+
+export const logout = async (_req: Request, res: Response): Promise<Response> => {
+  try {
+    return apiRes.successResponse(res, USER.logoutSuccess, null);
+  } catch (error) {
+    return apiRes.errorResponse(res, error);
+  }
+};
+
