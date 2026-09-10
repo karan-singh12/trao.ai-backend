@@ -3,6 +3,9 @@ import {
   getUserKits,
   getKitById,
   createKit,
+  generateKit,
+  generateKitStream,
+  regenerateSection,
   updateKit,
   deleteKit,
   updateQuestion,
@@ -18,6 +21,9 @@ router.use(authMiddleware);
 
 router.get('/', getUserKits);
 router.post('/', createKit);
+router.post('/generate', generateKit);
+router.post('/generate/stream', generateKitStream);
+router.post('/:id/regenerate', regenerateSection);
 router.get('/:id', getKitById);
 router.put('/:id', updateKit);
 router.delete('/:id', deleteKit);

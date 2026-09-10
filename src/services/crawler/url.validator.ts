@@ -3,6 +3,7 @@ export interface UrlValidationResult {
   sanitizedUrl?: string;
   reason?: string;
   isLocalOrPrivate?: boolean;
+  parsedUrl?: URL;
 }
 
 const PRIVATE_IP_PATTERNS = [
@@ -65,6 +66,7 @@ export class UrlValidator {
       isValid: true,
       sanitizedUrl: parsed.toString(),
       isLocalOrPrivate: isLocal,
+      parsedUrl: parsed,
     };
   }
 }

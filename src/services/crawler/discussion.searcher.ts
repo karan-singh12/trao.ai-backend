@@ -8,6 +8,20 @@ export interface PublicDiscussionResult {
 }
 
 export class DiscussionSearcher {
+  async search(
+    companyName: string,
+    roleTitle?: string
+  ): Promise<PublicDiscussionResult> {
+    return DiscussionSearcher.searchInterviewDiscussion(companyName, roleTitle);
+  }
+
+  static async search(
+    companyName: string,
+    roleTitle?: string
+  ): Promise<PublicDiscussionResult> {
+    return DiscussionSearcher.searchInterviewDiscussion(companyName, roleTitle);
+  }
+
   /**
    * Looks up public interview discussions for a given company.
    * If not found, reports honestly without fabricating information.

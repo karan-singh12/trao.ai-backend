@@ -3,3 +3,5 @@ export * from './auth/password.service';
 export * from './schedule';
 export * from './coverage';
 export * from './crawler';
+export * from './llm';
+export * from './pipeline';

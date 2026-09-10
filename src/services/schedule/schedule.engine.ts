@@ -28,6 +28,14 @@ const DIFFICULTY_MINUTES: Record<number, number> = {
  * 5. Every question_ids entry refers to a question that exists.
  */
 export class ScheduleEngine {
+  static buildSchedule(
+    questions: Question[],
+    daysAvailable: number,
+    requirements: Requirement[] = []
+  ): KitSchedule {
+    return ScheduleEngine.allocateSchedule(daysAvailable, questions, requirements);
+  }
+
   /**
    * Distribute questions across exactly daysAvailable days.
    */

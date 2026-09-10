@@ -17,9 +17,24 @@ export interface CompanyResearchResult {
   hiring_page_found: boolean;
   discussion_findings: PublicDiscussionResult | null;
   combined_research_text: string;
+  companyUrl?: string;
+  pagesUsed?: string[];
+  status?: string;
+  hiringContent?: string;
+  aboutContent?: string;
 }
 
+export type CrawledCompanyData = CompanyResearchResult;
+
 export class CompanyCrawler {
+  async crawl(companyUrl: string, companyName?: string): Promise<CompanyResearchResult> {
+    return CompanyCrawler.crawlCompany(companyUrl, companyName);
+  }
+
+  static async crawl(companyUrl: string, companyName?: string): Promise<CompanyResearchResult> {
+    return CompanyCrawler.crawlCompany(companyUrl, companyName);
+  }
+
   /**
    * Performs end-to-end research on a company website and public discussions.
    *
