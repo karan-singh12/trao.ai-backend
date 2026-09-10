@@ -1,5 +1,4 @@
-import { ILLMProvider } from '../../llm/llm.types';
-import { LLMFactory } from '../../llm/llm.factory';
+import { ILLMProvider, LLMFactory } from '../../../sdk';
 import { CompanyBrief } from '../../../types/kit.types';
 import { CrawledCompanyData } from '../../crawler/company.crawler';
 
@@ -7,7 +6,7 @@ export class CompanyBriefGenerator {
   private llm: ILLMProvider;
 
   constructor(llm?: ILLMProvider) {
-    this.llm = llm || LLMFactory.getProvider();
+    this.llm = llm || LLMFactory.getProvider('brief');
   }
 
   async generate(

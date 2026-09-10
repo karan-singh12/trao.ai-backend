@@ -1,5 +1,4 @@
-import { ILLMProvider } from '../../llm/llm.types';
-import { LLMFactory } from '../../llm/llm.factory';
+import { ILLMProvider, LLMFactory } from '../../../sdk';
 import { Question, Requirement, QuestionCategory } from '../../../types/kit.types';
 
 export interface QuestionGenerationContext {
@@ -12,7 +11,7 @@ export class QuestionGenerator {
   private llm: ILLMProvider;
 
   constructor(llm?: ILLMProvider) {
-    this.llm = llm || LLMFactory.getProvider();
+    this.llm = llm || LLMFactory.getProvider('questions');
   }
 
   async generateForRequirements(

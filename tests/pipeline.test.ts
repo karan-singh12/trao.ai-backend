@@ -7,7 +7,7 @@ import { SecondPassRunner } from '../src/services/pipeline/second.pass';
 import { KitGenerationPipeline } from '../src/services/pipeline/pipeline.service';
 import { RegeneratorService } from '../src/services/pipeline/regenerator.service';
 import { AppendixAValidator } from '../src/validators/kit/appendixA.validator';
-import { MockLLMProvider } from '../src/services/llm/mock.provider';
+import { MockLLMProvider } from '../src/sdk';
 import { Requirement, Question, KitData } from '../src/types/kit.types';
 
 describe('Multi-Step LLM Pipeline & Second Pass Loop (Part 5)', () => {

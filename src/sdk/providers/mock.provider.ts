@@ -1,8 +1,8 @@
-import { ILLMProvider, LLMPromptOptions, LLMResponse } from './llm.types';
+import { ILLMProvider, LLMPromptOptions, LLMResponse } from '../types/llm.types';
 
 export class MockLLMProvider implements ILLMProvider {
   readonly name = 'mock';
-  readonly defaultModel = 'deterministic-heuristic-v1';
+  readonly defaultModel = 'mock-llm-v1';
 
   isAvailable(): boolean {
     return true;
@@ -10,17 +10,21 @@ export class MockLLMProvider implements ILLMProvider {
 
   async generateText(options: LLMPromptOptions): Promise<LLMResponse<string>> {
     return {
-      text: 'Mock generated text response based on prompt context.',
+      text: `Mock synthesized response for query: "${options.userPrompt.substring(0, 100)}..."`,
       provider: this.name,
       model: this.defaultModel,
+      tokensUsed: 42,
     };
   }
 
   async generateJson<T = any>(options: LLMPromptOptions): Promise<LLMResponse<T>> {
     const prompt = options.userPrompt.toLowerCase();
 
-    // Heuristic routing based on prompt intent
-    if (prompt.includes('extract') && (prompt.includes('requirement') || prompt.includes('responsibilities'))) {
+    // 1. Requirement Extraction
+    if (
+      prompt.includes('extract') &&
+      (prompt.includes('requirement') || prompt.includes('responsibilities') || prompt.includes('engineering and role'))
+    ) {
       const parsedData = this.generateMockRoleExtraction(options.userPrompt);
       return {
         text: JSON.stringify(parsedData),
@@ -30,7 +34,13 @@ export class MockLLMProvider implements ILLMProvider {
       };
     }
 
-    if (prompt.includes('company_brief') || prompt.includes('company brief') || prompt.includes('what_they_do')) {
+    // 2. Company Brief
+    if (
+      prompt.includes('company_brief') ||
+      prompt.includes('company brief') ||
+      prompt.includes('what_they_do') ||
+      prompt.includes('culture_summary')
+    ) {
       const parsedData = this.generateMockCompanyBrief(options.userPrompt);
       return {
         text: JSON.stringify(parsedData),
@@ -40,6 +50,7 @@ export class MockLLMProvider implements ILLMProvider {
       };
     }
 
+    // 3. Flashcards
     if (prompt.includes('flashcard')) {
       const parsedData = this.generateMockFlashcards(options.userPrompt);
       return {
@@ -50,6 +61,7 @@ export class MockLLMProvider implements ILLMProvider {
       };
     }
 
+    // 4. Questions / Gaps / Interview Question Generation
     if (prompt.includes('question') || prompt.includes('gap')) {
       const parsedData = this.generateMockQuestions(options.userPrompt);
       return {
@@ -74,7 +86,11 @@ export class MockLLMProvider implements ILLMProvider {
     // Extract title
     let title = 'Software Engineer';
     for (const line of lines) {
-      if (line.toLowerCase().includes('engineer') || line.toLowerCase().includes('developer') || line.toLowerCase().includes('manager')) {
+      if (
+        line.toLowerCase().includes('engineer') ||
+        line.toLowerCase().includes('developer') ||
+        line.toLowerCase().includes('manager')
+      ) {
         title = line.replace(/^[#*-]\s*/, '').slice(0, 60);
         break;
       }
@@ -150,7 +166,7 @@ export class MockLLMProvider implements ILLMProvider {
     };
   }
 
-  private generateMockCompanyBrief(userPrompt: string): any {
+  private generateMockCompanyBrief(_userPrompt: string): any {
     return {
       summary: 'A fast-growing technology company delivering modern software solutions.',
       what_they_do: 'Develops and scales engineering platforms and user-facing digital applications.',

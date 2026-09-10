@@ -22,7 +22,7 @@ export class RateLimiter {
       return this.acquire();
     }
 
-    // 2. Minimum interval between consecutive requests to avoid burst limit drops
+    // 2. Minimum interval between consecutive requests
     const elapsedSinceLast = now - this.lastRequestTime;
     if (elapsedSinceLast < this.minIntervalMs) {
       await this.sleep(this.minIntervalMs - elapsedSinceLast);
@@ -65,71 +65,15 @@ export class RateLimiter {
           throw err;
         }
 
-        // Exponential backoff with jitter
-        const jitter = Math.random() * 500;
-        const delay = Math.min(30000, baseDelayMs * Math.pow(2, attempt - 1) + jitter);
-
-        // Check if server gave a Retry-After header
-        const retryAfterSec = err?.headers?.['retry-after'] || err?.retryAfter;
-        const finalDelay = retryAfterSec ? Number(retryAfterSec) * 1000 : delay;
-
+        const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 500, 30000);
         console.warn(
-          `[RateLimiter] Transient rate limit or server error encountered (attempt ${attempt}/${maxRetries}). Backing off for ${Math.round(
-            finalDelay
-          )}ms...`
+          `[SDK/RateLimiter] Attempt ${attempt}/${maxRetries} hit rate limit / transient error (${err.message}). Retrying in ${Math.round(delay)}ms...`
         );
-
-        await new Promise((resolve) => setTimeout(resolve, finalDelay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 
-    throw new Error('Max retries exceeded in RateLimiter');
-  }
-
-  static cleanJsonResponse(raw: string): string {
-    if (!raw) return '{}';
-    let text = raw.trim();
-
-    // Strip markdown code blocks like ```json ... ``` or ``` ... ```
-    if (text.startsWith('```')) {
-      text = text.replace(/^```(?:json)?\s*/i, '');
-      text = text.replace(/```\s*$/i, '');
-    }
-
-    // Sometimes text might have explanatory leading or trailing characters
-    const firstBrace = text.indexOf('{');
-    const firstBracket = text.indexOf('[');
-    let startIdx = -1;
-
-    if (firstBrace !== -1 && firstBracket !== -1) {
-      startIdx = Math.min(firstBrace, firstBracket);
-    } else if (firstBrace !== -1) {
-      startIdx = firstBrace;
-    } else if (firstBracket !== -1) {
-      startIdx = firstBracket;
-    }
-
-    if (startIdx > 0) {
-      text = text.slice(startIdx);
-    }
-
-    const lastBrace = text.lastIndexOf('}');
-    const lastBracket = text.lastIndexOf(']');
-    let endIdx = -1;
-
-    if (lastBrace !== -1 && lastBracket !== -1) {
-      endIdx = Math.max(lastBrace, lastBracket);
-    } else if (lastBrace !== -1) {
-      endIdx = lastBrace;
-    } else if (lastBracket !== -1) {
-      endIdx = lastBracket;
-    }
-
-    if (endIdx !== -1 && endIdx < text.length - 1) {
-      text = text.slice(0, endIdx + 1);
-    }
-
-    return text.trim();
+    throw new Error('SDK RateLimiter: Max retries exceeded without successful response');
   }
 
   private sleep(ms: number): Promise<void> {

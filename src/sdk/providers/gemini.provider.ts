@@ -1,5 +1,5 @@
-import { ILLMProvider, LLMPromptOptions, LLMResponse } from './llm.types';
-import { RateLimiter } from './rate.limiter';
+import { ILLMProvider, LLMPromptOptions, LLMResponse } from '../types/llm.types';
+import { RateLimiter } from '../rate.limiter';
 
 export class GeminiProvider implements ILLMProvider {
   readonly name = 'gemini';
@@ -25,8 +25,11 @@ export class GeminiProvider implements ILLMProvider {
 
     await this.rateLimiter.acquire();
 
+    const targetModel = options.preferredModel || this.defaultModel;
+    const baseUrl = (process.env.GEMINI_API_BASE_URL || 'https://generativelanguage.googleapis.com').replace(/\/+$/, '');
+
     const response = await RateLimiter.executeWithRetry(async () => {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.defaultModel}:generateContent?key=${this.apiKey}`;
+      const url = `${baseUrl}/v1beta/models/${targetModel}:generateContent?key=${this.apiKey}`;
 
       const contents: any[] = [];
       contents.push({
@@ -60,49 +63,49 @@ export class GeminiProvider implements ILLMProvider {
 
       if (!res.ok) {
         const errorText = await res.text();
-        const err: any = new Error(`Gemini API error [${res.status}]: ${errorText}`);
+        const err: any = new Error(`Gemini API error (${res.status}): ${errorText}`);
         err.status = res.status;
+        err.statusCode = res.status;
         throw err;
       }
 
-      const data = (await res.json()) as any;
-      const candidate = data?.candidates?.[0];
-      const text = candidate?.content?.parts?.[0]?.text || '';
-      const tokensUsed = data?.usageMetadata?.totalTokenCount;
-
+      const data: any = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       return {
         text,
-        tokensUsed,
+        provider: this.name,
+        model: targetModel,
+        tokensUsed: data.usageMetadata?.totalTokenCount,
       };
     });
 
-    return {
-      text: response.text,
-      provider: this.name,
-      model: this.defaultModel,
-      tokensUsed: response.tokensUsed,
-    };
+    return response;
   }
 
   async generateJson<T = any>(options: LLMPromptOptions): Promise<LLMResponse<T>> {
-    const promptOpts = {
+    const textRes = await this.generateText({
       ...options,
       jsonMode: true,
-      userPrompt: `${options.userPrompt}\n\nIMPORTANT: Respond with ONLY valid JSON conforming to the requested schema. Do not enclose in backticks or markdown fences.`,
-    };
-
-    const textRes = await this.generateText(promptOpts);
-    const cleaned = RateLimiter.cleanJsonResponse(textRes.text);
+      userPrompt: `${options.userPrompt}\n\nIMPORTANT: Respond with VALID JSON ONLY. Do not wrap in markdown codeblocks.`,
+    });
 
     try {
-      const parsed = JSON.parse(cleaned) as T;
+      let raw = textRes.text.trim();
+      if (raw.startsWith('```json')) {
+        raw = raw.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (raw.startsWith('```')) {
+        raw = raw.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      const parsed: T = JSON.parse(raw);
       return {
         ...textRes,
         data: parsed,
       };
-    } catch (parseErr: any) {
-      console.error('[GeminiProvider] JSON parse failure. Raw text was:', textRes.text);
-      throw new Error(`Failed to parse LLM JSON response: ${parseErr.message}`);
+    } catch (err: any) {
+      throw new Error(
+        `GeminiProvider: Failed to parse JSON response: ${err.message}. Raw output was:\n${textRes.text.substring(0, 500)}`
+      );
     }
   }
 }

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "case-01",
+    "jd": "Senior Full-Stack Engineer\n\nMust have 5+ years of experience with React, TypeScript, and Node.js. Experience building scalable microservices and REST APIs.",
+    "company_url": "https://example.com/company",
+    "days": 5
+  },
+  {
+    "id": "case-02",
+    "jd": "Junior Python Developer.\nMust know Python basics.",
+    "company_url": "https://example.com/careers",
+    "days": 3
+  }
+]

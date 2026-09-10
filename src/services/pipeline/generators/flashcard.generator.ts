@@ -1,12 +1,11 @@
-import { ILLMProvider } from '../../llm/llm.types';
-import { LLMFactory } from '../../llm/llm.factory';
+import { ILLMProvider, LLMFactory } from '../../../sdk';
 import { Flashcard, Requirement } from '../../../types/kit.types';
 
 export class FlashcardGenerator {
   private llm: ILLMProvider;
 
   constructor(llm?: ILLMProvider) {
-    this.llm = llm || LLMFactory.getProvider();
+    this.llm = llm || LLMFactory.getProvider('flashcards');
   }
 
   async generate(requirements: Requirement[]): Promise<Flashcard[]> {
