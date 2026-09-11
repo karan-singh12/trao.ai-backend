@@ -22,7 +22,7 @@ export const authMiddleware = (
       return unauthorizedResponse(res, AUTH.invalidToken);
     }
 
-    req.user = {
+    (req as any).user = {
       userId: payload.userId,
       id: payload.userId,
       _id: payload.userId,

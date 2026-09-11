@@ -76,7 +76,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 
 export const getMe = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = (req as any).user?.id || (req as any).user?.userId;
     if (!userId) {
       return apiRes.unauthorizedResponse(res, AUTH.tokenRequired);
     }

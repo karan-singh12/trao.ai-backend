@@ -99,38 +99,38 @@ export class ModelRouter implements ILLMProvider {
 
     switch (task) {
       case 'extraction': {
-        // High precision JSON extraction & grounded parsing: Gemini -> OpenAI -> Groq -> OpenRouter
+        // High precision JSON extraction & grounded parsing: Gemini -> Mock
         primaryPreference =
           (process.env.ROUTER_EXTRACTION_PROVIDER as LLMProviderName) || 'gemini';
-        fallbackPreferences = ['gemini', 'openai', 'groq', 'openrouter', 'mock'];
+        fallbackPreferences = ['gemini', 'mock'];
         break;
       }
       case 'brief': {
-        // Large context window (1M tokens) for scraped company pages: Gemini -> OpenRouter -> Groq -> OpenAI
+        // Large context window (1M tokens) for scraped company pages: Gemini -> Mock
         primaryPreference =
           (process.env.ROUTER_BRIEF_PROVIDER as LLMProviderName) || 'gemini';
-        fallbackPreferences = ['gemini', 'openrouter', 'groq', 'openai', 'mock'];
+        fallbackPreferences = ['gemini', 'mock'];
         break;
       }
       case 'questions': {
-        // Calibrated question generation, difficulty rating, scoring rubrics: OpenAI -> Groq -> Gemini -> OpenRouter
+        // Calibrated question generation, difficulty rating, scoring rubrics: Gemini -> Mock
         primaryPreference =
-          (process.env.ROUTER_QUESTIONS_PROVIDER as LLMProviderName) || 'openai';
-        fallbackPreferences = ['openai', 'groq', 'gemini', 'openrouter', 'mock'];
+          (process.env.ROUTER_QUESTIONS_PROVIDER as LLMProviderName) || 'gemini';
+        fallbackPreferences = ['gemini', 'mock'];
         break;
       }
       case 'flashcards': {
-        // Ultra-fast generation of active recall Q&A pairs: Groq -> Gemini -> OpenRouter -> OpenAI
+        // Active recall Q&A pairs: Gemini -> Mock
         primaryPreference =
-          (process.env.ROUTER_FLASHCARDS_PROVIDER as LLMProviderName) || 'groq';
-        fallbackPreferences = ['groq', 'gemini', 'openrouter', 'openai', 'mock'];
+          (process.env.ROUTER_FLASHCARDS_PROVIDER as LLMProviderName) || 'gemini';
+        fallbackPreferences = ['gemini', 'mock'];
         break;
       }
       case 'second_pass': {
-        // Fast targeted generation to close missing must-have gaps: Groq -> Gemini -> OpenAI -> OpenRouter
+        // Targeted gap closure: Gemini -> Mock
         primaryPreference =
-          (process.env.ROUTER_SECONDPASS_PROVIDER as LLMProviderName) || 'groq';
-        fallbackPreferences = ['groq', 'gemini', 'openai', 'openrouter', 'mock'];
+          (process.env.ROUTER_SECONDPASS_PROVIDER as LLMProviderName) || 'gemini';
+        fallbackPreferences = ['gemini', 'mock'];
         break;
       }
       case 'general':
@@ -139,7 +139,7 @@ export class ModelRouter implements ILLMProvider {
           process.env.LLM_PROVIDER ||
           'gemini') as LLMProviderName;
         primaryPreference = defaultEnv;
-        fallbackPreferences = ['gemini', 'groq', 'openai', 'openrouter', 'mock'];
+        fallbackPreferences = ['gemini', 'mock'];
         break;
       }
     }

@@ -8,6 +8,7 @@ export interface FetchedPage {
   rawHtml: string;
   links: Array<{ url: string; text: string }>;
   contentType?: string;
+  logoUrl?: string;
 }
 
 export interface FetchOptions {
@@ -90,6 +91,7 @@ export class PageFetcher {
         const title = PageFetcher.extractTitle(rawHtml);
         const cleanedText = PageFetcher.cleanHtml(rawHtml);
         const links = PageFetcher.extractLinks(rawHtml, targetUrl);
+        const logoUrl = PageFetcher.extractLogoUrl(rawHtml, targetUrl) || undefined;
 
         return {
           url: targetUrl,
@@ -99,6 +101,7 @@ export class PageFetcher {
           rawHtml,
           links,
           contentType,
+          logoUrl,
         };
       } catch (err: any) {
         clearTimeout(timeoutHandle);
@@ -249,6 +252,54 @@ export class PageFetcher {
     }
 
     return links;
+  }
+
+  /**
+   * Extracts the company logo or favicon URL from HTML metadata.
+   */
+  static extractLogoUrl(html: string, baseUrl: string): string | null {
+    if (!html) return null;
+
+    try {
+      const base = new URL(baseUrl);
+
+      // 1. OpenGraph image or Twitter image
+      const ogMatch =
+        html.match(/<meta\s+[^>]*property=["'](?:og:image|twitter:image)["'][^>]*content=["']([^"']+)["']/i) ||
+        html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["'](?:og:image|twitter:image)["']/i);
+      if (ogMatch && ogMatch[1]) {
+        return new URL(ogMatch[1].trim(), baseUrl).toString();
+      }
+
+      // 2. Apple Touch Icon (high-res mobile icon)
+      const appleIconMatch = html.match(
+        /<link\s+[^>]*rel=["'](?:apple-touch-icon|apple-touch-icon-precomposed)["'][^>]*href=["']([^"']+)["']/i
+      );
+      if (appleIconMatch && appleIconMatch[1]) {
+        return new URL(appleIconMatch[1].trim(), baseUrl).toString();
+      }
+
+      // 3. Favicon or standard icon
+      const iconMatch = html.match(
+        /<link\s+[^>]*rel=["'](?:shortcut\s+)?icon["'][^>]*href=["']([^"']+)["']/i
+      );
+      if (iconMatch && iconMatch[1]) {
+        return new URL(iconMatch[1].trim(), baseUrl).toString();
+      }
+
+      // 4. Schema.org / JSON-LD logo
+      const jsonLdMatch = html.match(/"logo"\s*:\s*(?:\{[^}]*"url"\s*:\s*["']([^"']+)["']|["']([^"']+)["'])/i);
+      const candidate = jsonLdMatch ? jsonLdMatch[1] || jsonLdMatch[2] : null;
+      if (candidate) {
+        return new URL(candidate.trim(), baseUrl).toString();
+      }
+
+      // 5. Fallback to Google high-res 128px favicon service
+      const domain = base.hostname.replace(/^www\./, '');
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    } catch {
+      return null;
+    }
   }
 }
 

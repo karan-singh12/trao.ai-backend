@@ -1,4 +1,12 @@
+import dns from "node:dns";
 import mongoose from "mongoose";
+
+// Fix Node.js querySrv ECONNREFUSED on Windows/ISPs for MongoDB Atlas SRV records
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch (e) {
+  // Ignore if not supported in environment
+}
 
 export const connectDB = async (): Promise<void> => {
   const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/trao_ai";

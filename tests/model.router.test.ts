@@ -33,11 +33,11 @@ describe('Intelligent ModelRouter & Multi-Provider Architecture', () => {
     assert.ok(extractionRoute.primary, 'Must resolve primary provider for extraction');
     assert.ok(Array.isArray(extractionRoute.fallbackChain), 'Must have a fallback chain');
 
-    // Task questions -> default routes to openai (or first available in fallback)
+    // Task questions -> default routes to gemini (or first available in fallback)
     const questionsRoute = router.resolveRoute('questions');
     assert.ok(questionsRoute.primary, 'Must resolve primary provider for questions');
 
-    // Task flashcards -> default routes to groq (or first available in fallback)
+    // Task flashcards -> default routes to gemini (or first available in fallback)
     const flashcardsRoute = router.resolveRoute('flashcards');
     assert.ok(flashcardsRoute.primary, 'Must resolve primary provider for flashcards');
   });

@@ -59,6 +59,10 @@ export class OpenAIProvider implements ILLMProvider {
     await this.rateLimiter.acquire();
 
     const targetModel = options.preferredModel || this.defaultModel;
+    const candidateModels =
+      this.name === 'groq'
+        ? Array.from(new Set([targetModel, 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile']))
+        : [targetModel];
 
     const response = await RateLimiter.executeWithRetry(async () => {
       const messages: any[] = [];
@@ -69,46 +73,58 @@ export class OpenAIProvider implements ILLMProvider {
 
       messages.push({ role: 'user', content: options.userPrompt });
 
-      const body: any = {
-        model: targetModel,
-        messages,
-        temperature: options.temperature ?? 0.2,
-        max_tokens: options.maxTokens ?? 4096,
-      };
+      let lastErr: any = null;
 
-      if (options.jsonMode) {
-        body.response_format = { type: 'json_object' };
+      for (const currentModel of candidateModels) {
+        const body: any = {
+          model: currentModel,
+          messages,
+          temperature: options.temperature ?? 0.2,
+          max_tokens: options.maxTokens ?? 4096,
+        };
+
+        if (options.jsonMode) {
+          body.response_format = { type: 'json_object' };
+        }
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+          ...this.extraHeaders,
+        };
+
+        const res = await fetch(`${this.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        });
+
+        if (res.status === 404 && candidateModels.length > 1) {
+          const errorText = await res.text();
+          lastErr = new Error(`${this.name} API error (404 for model ${currentModel}): ${errorText}`);
+          continue;
+        }
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          const err: any = new Error(`${this.name} API error (${res.status}): ${errorText}`);
+          err.status = res.status;
+          err.statusCode = res.status;
+          throw err;
+        }
+
+        const data: any = await res.json();
+        const text = data.choices?.[0]?.message?.content || '';
+
+        return {
+          text,
+          provider: this.name,
+          model: currentModel,
+          tokensUsed: data.usage?.total_tokens,
+        };
       }
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-        ...this.extraHeaders,
-      };
-
-      const res = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        const err: any = new Error(`${this.name} API error (${res.status}): ${errorText}`);
-        err.status = res.status;
-        err.statusCode = res.status;
-        throw err;
-      }
-
-      const data: any = await res.json();
-      const text = data.choices?.[0]?.message?.content || '';
-
-      return {
-        text,
-        provider: this.name,
-        model: targetModel,
-        tokensUsed: data.usage?.total_tokens,
-      };
+      throw lastErr || new Error(`${this.name} API: Failed request`);
     });
 
     return response;

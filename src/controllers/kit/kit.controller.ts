@@ -5,9 +5,13 @@ import { KIT, AUTH } from '../../utils/responseMssg';
 import { KitGenerationPipeline } from '../../services/pipeline/pipeline.service';
 import { RegeneratorService } from '../../services/pipeline/regenerator.service';
 
+const getUserId = (req: Request): string | undefined => {
+  return (req as any).user?.id || (req as any).user?.userId;
+};
+
 export const getUserKits = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     if (!userId) {
       return apiRes.unauthorizedResponse(res, AUTH.tokenRequired);
     }
@@ -21,7 +25,7 @@ export const getUserKits = async (req: Request, res: Response): Promise<Response
 
 export const getKitById = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     const id = req.params.id as string;
 
     if (!userId) {
@@ -41,7 +45,7 @@ export const getKitById = async (req: Request, res: Response): Promise<Response>
 
 export const createKit = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     if (!userId) {
       return apiRes.unauthorizedResponse(res, AUTH.tokenRequired);
     }
@@ -57,7 +61,7 @@ export const createKit = async (req: Request, res: Response): Promise<Response> 
 
 export const generateKit = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     if (!userId) {
       return apiRes.unauthorizedResponse(res, AUTH.tokenRequired);
     }
@@ -86,7 +90,7 @@ export const generateKit = async (req: Request, res: Response): Promise<Response
 
 export const generateKitStream = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     if (!userId) {
       res.status(401).json({ success: false, message: AUTH.tokenRequired });
       return;
@@ -144,7 +148,7 @@ export const generateKitStream = async (req: Request, res: Response): Promise<vo
 
 export const regenerateSection = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     const id = req.params.id as string;
     const { section, category, days } = req.body;
 
@@ -182,7 +186,7 @@ export const regenerateSection = async (req: Request, res: Response): Promise<Re
 
 export const updateKit = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     const id = req.params.id as string;
 
     if (!userId) {
@@ -202,7 +206,7 @@ export const updateKit = async (req: Request, res: Response): Promise<Response> 
 
 export const deleteKit = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     const id = req.params.id as string;
 
     if (!userId) {
@@ -222,7 +226,7 @@ export const deleteKit = async (req: Request, res: Response): Promise<Response> 
 
 export const updateQuestion = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     const id = req.params.id as string;
     const questionId = req.params.questionId as string;
     const { prompt, answer_outline, difficulty, category } = req.body;
@@ -250,7 +254,7 @@ export const updateQuestion = async (req: Request, res: Response): Promise<Respo
 
 export const deleteQuestion = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     const id = req.params.id as string;
     const questionId = req.params.questionId as string;
 
@@ -271,7 +275,7 @@ export const deleteQuestion = async (req: Request, res: Response): Promise<Respo
 
 export const recordConfidence = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = getUserId(req);
     const id = req.params.id as string;
     const cardId = req.params.cardId as string;
     const { confidence } = req.body;

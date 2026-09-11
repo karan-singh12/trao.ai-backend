@@ -9,7 +9,7 @@ export class GeminiProvider implements ILLMProvider {
 
   constructor(apiKey?: string, model?: string) {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY || '';
-    this.defaultModel = model || process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    this.defaultModel = model || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     // Free tier: 15 RPM, minimum 1.5s between calls
     this.rateLimiter = new RateLimiter(14, 1500);
   }
@@ -26,57 +26,72 @@ export class GeminiProvider implements ILLMProvider {
     await this.rateLimiter.acquire();
 
     const targetModel = options.preferredModel || this.defaultModel;
+    const candidateModels = Array.from(
+      new Set([targetModel, 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'])
+    );
     const baseUrl = (process.env.GEMINI_API_BASE_URL || 'https://generativelanguage.googleapis.com').replace(/\/+$/, '');
 
     const response = await RateLimiter.executeWithRetry(async () => {
-      const url = `${baseUrl}/v1beta/models/${targetModel}:generateContent?key=${this.apiKey}`;
+      let lastErr: any = null;
 
-      const contents: any[] = [];
-      contents.push({
-        role: 'user',
-        parts: [{ text: options.userPrompt }],
-      });
+      for (const currentModel of candidateModels) {
+        const url = `${baseUrl}/v1beta/models/${currentModel}:generateContent?key=${this.apiKey}`;
 
-      const body: any = {
-        contents,
-        generationConfig: {
-          temperature: options.temperature ?? 0.2,
-          maxOutputTokens: options.maxTokens ?? 4096,
-        },
-      };
+        const contents: any[] = [];
+        contents.push({
+          role: 'user',
+          parts: [{ text: options.userPrompt }],
+        });
 
-      if (options.systemPrompt) {
-        body.systemInstruction = {
-          parts: [{ text: options.systemPrompt }],
+        const body: any = {
+          contents,
+          generationConfig: {
+            temperature: options.temperature ?? 0.2,
+            maxOutputTokens: options.maxTokens ?? 4096,
+          },
+        };
+
+        if (options.systemPrompt) {
+          body.systemInstruction = {
+            parts: [{ text: options.systemPrompt }],
+          };
+        }
+
+        if (options.jsonMode) {
+          body.generationConfig.responseMimeType = 'application/json';
+        }
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (res.status === 404) {
+          const errorText = await res.text();
+          lastErr = new Error(`Gemini API error (404 for model ${currentModel}): ${errorText}`);
+          continue;
+        }
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          const err: any = new Error(`Gemini API error (${res.status}): ${errorText}`);
+          err.status = res.status;
+          err.statusCode = res.status;
+          throw err;
+        }
+
+        const data: any = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return {
+          text,
+          provider: this.name,
+          model: currentModel,
+          tokensUsed: data.usageMetadata?.totalTokenCount,
         };
       }
 
-      if (options.jsonMode) {
-        body.generationConfig.responseMimeType = 'application/json';
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        const err: any = new Error(`Gemini API error (${res.status}): ${errorText}`);
-        err.status = res.status;
-        err.statusCode = res.status;
-        throw err;
-      }
-
-      const data: any = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      return {
-        text,
-        provider: this.name,
-        model: targetModel,
-        tokensUsed: data.usageMetadata?.totalTokenCount,
-      };
+      throw lastErr || new Error('Gemini API: No supported model found on current API endpoint');
     });
 
     return response;

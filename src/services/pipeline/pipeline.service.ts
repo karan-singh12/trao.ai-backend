@@ -142,6 +142,10 @@ export class KitGenerationPipeline {
     // --- STEP 8: Construct Appendix A Kit & Validate ---
     reportProgress('VALIDATE_KIT', 'Validating assembled kit against Appendix A schema...');
     const pagesUsed = (crawledData as any).pages_used || (crawledData as any).pagesUsed || [];
+    const targetLogoUrl =
+      crawledData.logo_url ||
+      `https://www.google.com/s2/favicons?domain=${urlValidation.parsedUrl?.hostname.replace(/^www\./, '') || 'example.com'}&sz=128`;
+
     const source: KitSource = {
       company: companyDisplayName,
       company_url: sanitizedUrl,
@@ -150,11 +154,15 @@ export class KitGenerationPipeline {
       jd_chars: jobDescription.length,
       researched_at: new Date().toISOString(),
       pages_used: pagesUsed,
+      logo_url: targetLogoUrl,
     };
 
     const assembledKit: KitData = {
       source,
-      company_brief: companyBrief,
+      company_brief: {
+        ...companyBrief,
+        logo_url: targetLogoUrl,
+      },
       role: roleInfo,
       questions: finalQuestions,
       flashcards,

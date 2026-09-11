@@ -88,6 +88,7 @@ const KitSchema = new Schema<IKitMongooseDocument>(
       company_url: { type: String, required: true, default: '' },
       role: { type: String, required: true, default: '' },
       location: { type: String, default: '' },
+      logo_url: { type: String, default: '' },
       jd_chars: { type: Number, default: 0 },
       researched_at: { type: String, default: () => new Date().toISOString() },
       pages_used: [{ type: String }],
@@ -95,6 +96,7 @@ const KitSchema = new Schema<IKitMongooseDocument>(
     company_brief: {
       summary: { type: String, default: '' },
       what_they_do: { type: String, default: '' },
+      logo_url: { type: String, default: '' },
       sources: [{ type: String }],
     },
     role: {
@@ -138,6 +140,7 @@ KitSchema.methods.toAppendixA = function (): KitData {
       company_url: this.source.company_url,
       role: this.source.role,
       location: this.source.location,
+      ...(this.source.logo_url ? { logo_url: this.source.logo_url } : {}),
       jd_chars: this.source.jd_chars,
       researched_at: this.source.researched_at,
       pages_used: this.source.pages_used || [],
@@ -145,6 +148,7 @@ KitSchema.methods.toAppendixA = function (): KitData {
     company_brief: {
       summary: this.company_brief.summary,
       what_they_do: this.company_brief.what_they_do,
+      ...(this.company_brief.logo_url ? { logo_url: this.company_brief.logo_url } : {}),
       sources: this.company_brief.sources || [],
     },
     role: {

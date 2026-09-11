@@ -22,6 +22,7 @@ export interface CompanyResearchResult {
   status?: string;
   hiringContent?: string;
   aboutContent?: string;
+  logo_url?: string;
 }
 
 export type CrawledCompanyData = CompanyResearchResult;
@@ -96,6 +97,9 @@ export class CompanyCrawler {
         ? await DiscussionSearcher.searchInterviewDiscussion(companyName, sanitizedUrl)
         : null;
 
+      const domain = new URL(sanitizedUrl).hostname.replace(/^www\./, '');
+      const fallbackLogo = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+
       return {
         reachable: false,
         error: {
@@ -105,6 +109,7 @@ export class CompanyCrawler {
         pages_used: [],
         hiring_page_found: false,
         discussion_findings: discussion,
+        logo_url: fallbackLogo,
         combined_research_text: `Company site at ${companyUrl} could not be retrieved.`,
       };
     }
@@ -175,6 +180,10 @@ export class CompanyCrawler {
       );
     }
 
+    const domain = new URL(sanitizedUrl).hostname.replace(/^www\./, '');
+    const fallbackLogo = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    const logoUrl = homepage.logoUrl || fallbackLogo;
+
     return {
       reachable: true,
       pages_used: pagesUsed,
@@ -184,6 +193,7 @@ export class CompanyCrawler {
       hiring_content: hiringContent || undefined,
       hiring_page_found: hiringPageFound,
       discussion_findings: discussion,
+      logo_url: logoUrl,
       combined_research_text: textSections.join('\n\n'),
     };
   }
