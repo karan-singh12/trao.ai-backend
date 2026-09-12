@@ -13,16 +13,17 @@
 
 ## 📑 Table of Contents
 1. [Core Architectural Philosophy & Invariants](#-core-architectural-philosophy--invariants)
-2. [Deep Dive 1: "The Hardest State Problem" (The Builder)](#-deep-dive-1-the-hardest-state-problem-the-builder)
-3. [Deep Dive 2: Deterministic Arithmetic Schedule Engine](#-deep-dive-2-deterministic-arithmetic-schedule-engine)
-4. [Deep Dive 3: The Second Pass Coverage Feedback Loop](#-deep-dive-3-the-second-pass-coverage-feedback-loop)
-5. [Deep Dive 4: Intelligent Model Routing & Multi-Provider Architecture](#-deep-dive-4-intelligent-model-routing--multi-provider-architecture)
-6. [Deep Dive 5: Autonomous Web Crawler & SSRF Defense](#-deep-dive-5-autonomous-web-crawler--ssrf-defense)
-7. [Full 9-Stage Sequenced Pipeline](#-full-9-stage-sequenced-pipeline)
-8. [API Reference & Endpoint Contracts](#-api-reference--endpoint-contracts)
-9. [Headless Batch Evaluation CLI (Appendix B)](#-headless-batch-evaluation-cli-appendix-b)
-10. [Automated Test Suite (45 Passing Tests)](#-automated-test-suite-45-passing-tests)
-11. [Quick Start & Local Setup](#-quick-start--local-setup)
+2. [Authentication & Strict User Isolation (Section 1)](#-authentication--strict-user-isolation-section-1)
+3. [Deep Dive 1: "The Hardest State Problem" (The Builder)](#-deep-dive-1-the-hardest-state-problem-the-builder)
+4. [Deep Dive 2: Deterministic Arithmetic Schedule Engine](#-deep-dive-2-deterministic-arithmetic-schedule-engine)
+5. [Deep Dive 3: The Second Pass Coverage Feedback Loop](#-deep-dive-3-the-second-pass-coverage-feedback-loop)
+6. [Deep Dive 4: Intelligent Model Routing & Multi-Provider Architecture](#-deep-dive-4-intelligent-model-routing--multi-provider-architecture)
+7. [Deep Dive 5: Autonomous Web Crawler & SSRF Defense](#-deep-dive-5-autonomous-web-crawler--ssrf-defense)
+8. [Full 9-Stage Sequenced Pipeline](#-full-9-stage-sequenced-pipeline)
+9. [API Reference & Endpoint Contracts](#-api-reference--endpoint-contracts)
+10. [Headless Batch Evaluation CLI (Appendix B)](#-headless-batch-evaluation-cli-appendix-b)
+11. [Automated Test Suite (45 Passing Tests)](#-automated-test-suite-45-passing-tests)
+12. [Quick Start & Local Setup](#-quick-start--local-setup)
 
 ---
 
@@ -39,6 +40,38 @@ Trao's engineering assessment specifically evaluates **architectural judgment**:
 | **Pure Code Determinism** | Scheduling, integer minutes, and gap-detection math are executed strictly in pure TypeScript (`ScheduleEngine`, `CoverageEngine`). | Asking the LLM to calculate day allocations or check its own coverage. |
 | **Zero Hallucination Grounding** | JDs are parsed strictly for explicit mentions. 2-line stubs extract only literal text. Unreachable URLs gracefully degrade without inventing corporate facts. | Hallucinating unmentioned frameworks, years of experience, or fake company histories. |
 | **Lossless User State** | User custom edits, pinned cards, and hand-crafted questions permanently survive category regenerations. | Overwriting user edits when refreshing a category. |
+
+---
+
+## 🔐 Authentication & Strict User Isolation (Section 1)
+
+As mandated by **Section 1: Authentication & User Isolation**, the platform implements minimal, robust, and secure authentication to guarantee complete multi-tenant candidate data privacy.
+
+### 1. Security Architecture & Token Mechanics
+- **Password Security**: Passwords are never stored in plaintext. They are salted and hashed using **bcrypt** (10 salt rounds) via `PasswordService`.
+- **Stateless Bearer JWTs**: Upon successful signup or login, the backend signs a cryptographic JSON Web Token (`TokenService.generateAccessToken`) containing the `userId`, `email`, and `role`.
+- **Validation Middleware (`authMiddleware.ts`)**:
+  - Intercepts incoming requests on protected endpoints via `Authorization: Bearer <token>`.
+  - Verifies token signature and claims. Gracefully captures `TokenExpiredError` and returns `401 Unauthorized`.
+  - Injects authenticated user context onto Express `req.user = { userId, email }`.
+- **Schema Validation**: Inputs are validated at the gateway using Joi (`userSignupSchema`, `userLoginSchema`) to reject malformed emails and weak credentials before hitting controllers.
+
+### 2. Strict User Isolation Invariant
+Trao's specification requires that:
+> *"Users can only read and modify their own kits (userId isolation in MongoDB queries)."*
+
+Our backend enforces this invariant at the database repository layer (`kitRepository.ts`):
+```typescript
+// All queries strictly enforce candidate ownership
+findByUser: (userId: string) => KitModel.find({ userId }).sort({ createdAt: -1 }),
+findById: (id: string, userId: string) => KitModel.findOne({ _id: id, userId }),
+delete: (id: string, userId: string) => KitModel.findOneAndDelete({ _id: id, userId }),
+update: (id: string, userId: string, updateData) => KitModel.findOneAndUpdate({ _id: id, userId }, updateData, { new: true })
+```
+Even if an attacker knows the MongoDB `_id` of another candidate's kit, any read, update, question patch, or delete request returns `404 Not Found`, guaranteeing zero horizontal privilege escalation.
+
+### 3. Deliberate Scope Restraint
+Following the assignment directive (*"Out of scope: Do not waste time on password reset, email verification, or RBAC hierarchies"*), we avoided unneeded enterprise bloat, prioritizing bulletproof core isolation and clean error handling.
 
 ---
 
@@ -268,10 +301,87 @@ The crawler pipeline (`CompanyCrawler`) extracts real-world company culture, hir
 
 ## 🔌 API Reference & Endpoint Contracts
 
-### Authentication
-Include `Authorization: Bearer <JWT_TOKEN>` header for protected endpoints.
+### 1. Authentication Endpoints (`/api/user`)
 
-### Core Endpoints
+All candidate registration and authentication endpoints return standard JSON envelopes.
+
+#### `POST /api/user/signup`
+Creates a new candidate account.
+```json
+// Request Body
+{
+  "email": "candidate@example.com",
+  "password": "SecurePassword123!"
+}
+
+// Success Response (201 Created)
+{
+  "status": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": "65f1234abcd...",
+      "email": "candidate@example.com"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+  }
+}
+```
+
+#### `POST /api/user/login`
+Authenticates an existing candidate and yields an access JWT.
+```json
+// Request Body
+{
+  "email": "candidate@example.com",
+  "password": "SecurePassword123!"
+}
+
+// Success Response (200 OK)
+{
+  "status": true,
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": "65f1234abcd...",
+      "email": "candidate@example.com"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+  }
+}
+```
+
+#### `GET /api/user/me`
+Protected by `authMiddleware`. Verifies token validity and returns candidate profile.
+```json
+// Headers
+// Authorization: Bearer <JWT_TOKEN>
+
+// Success Response (200 OK)
+{
+  "status": true,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "user": {
+      "id": "65f1234abcd...",
+      "email": "candidate@example.com"
+    }
+  }
+}
+```
+
+#### `POST /api/user/logout`
+Terminates user session client-side and acknowledges logout.
+```json
+// Headers: Authorization: Bearer <JWT_TOKEN>
+// Response (200 OK): { "status": true, "message": "Logged out successfully" }
+```
+
+---
+
+### 2. Kit Management & AI Generation Endpoints (`/api/kit`)
+
+All endpoints below require header: `Authorization: Bearer <JWT_TOKEN>`. Every operation is strictly filtered by the authenticated candidate's `userId`.
 
 #### 1. Generate Interview Prep Kit
 `POST /api/kit/generate`
