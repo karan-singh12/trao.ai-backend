@@ -11,23 +11,23 @@
 
 ---
 
-## 📑 Table of Contents
-1. [Core Architectural Philosophy & Invariants](#-core-architectural-philosophy--invariants)
-2. [Authentication & Strict User Isolation (Section 1)](#-authentication--strict-user-isolation-section-1)
-3. [Deep Dive 1: "The Hardest State Problem" (The Builder)](#-deep-dive-1-the-hardest-state-problem-the-builder)
-4. [Deep Dive 2: Deterministic Arithmetic Schedule Engine](#-deep-dive-2-deterministic-arithmetic-schedule-engine)
-5. [Deep Dive 3: The Second Pass Coverage Feedback Loop](#-deep-dive-3-the-second-pass-coverage-feedback-loop)
-6. [Deep Dive 4: Intelligent Model Routing & Multi-Provider Architecture](#-deep-dive-4-intelligent-model-routing--multi-provider-architecture)
-7. [Deep Dive 5: Autonomous Web Crawler & SSRF Defense](#-deep-dive-5-autonomous-web-crawler--ssrf-defense)
-8. [Full 9-Stage Sequenced Pipeline](#-full-9-stage-sequenced-pipeline)
-9. [API Reference & Endpoint Contracts](#-api-reference--endpoint-contracts)
-10. [Headless Batch Evaluation CLI (Appendix B)](#-headless-batch-evaluation-cli-appendix-b)
-11. [Automated Test Suite (45 Passing Tests)](#-automated-test-suite-45-passing-tests)
-12. [Quick Start & Local Setup](#-quick-start--local-setup)
+## Table of Contents
+1. [Core Architectural Philosophy & Invariants](#core-architectural-philosophy--invariants)
+2. [Authentication & Strict User Isolation (Section 1)](#authentication--strict-user-isolation-section-1)
+3. [Deep Dive 1: "The Hardest State Problem" (The Builder)](#deep-dive-1-the-hardest-state-problem-the-builder)
+4. [Deep Dive 2: Deterministic Arithmetic Schedule Engine](#deep-dive-2-deterministic-arithmetic-schedule-engine)
+5. [Deep Dive 3: The Second Pass Coverage Feedback Loop](#deep-dive-3-the-second-pass-coverage-feedback-loop)
+6. [Deep Dive 4: Intelligent Model Routing & Multi-Provider Architecture](#deep-dive-4-intelligent-model-routing--multi-provider-architecture)
+7. [Deep Dive 5: Autonomous Web Crawler & SSRF Defense](#deep-dive-5-autonomous-web-crawler--ssrf-defense)
+8. [Full 9-Stage Sequenced Pipeline](#full-9-stage-sequenced-pipeline)
+9. [API Reference & Endpoint Contracts](#api-reference--endpoint-contracts)
+10. [Headless Batch Evaluation CLI (Appendix B)](#headless-batch-evaluation-cli-appendix-b)
+11. [Automated Test Suite (45 Passing Tests)](#automated-test-suite-45-passing-tests)
+12. [Quick Start & Local Setup](#quick-start--local-setup)
 
 ---
 
-## 🏛️ Core Architectural Philosophy & Invariants
+## Core Architectural Philosophy & Invariants
 
 Trao's engineering assessment specifically evaluates **architectural judgment**:
 - **What we delegated to LLMs**: Natural language comprehension, company culture synthesis, question rubric phrasing, and active-recall explanations.
@@ -43,7 +43,7 @@ Trao's engineering assessment specifically evaluates **architectural judgment**:
 
 ---
 
-## 🔐 Authentication & Strict User Isolation (Section 1)
+## Authentication & Strict User Isolation (Section 1)
 
 As mandated by **Section 1: Authentication & User Isolation**, the platform implements minimal, robust, and secure authentication to guarantee complete multi-tenant candidate data privacy.
 
@@ -62,7 +62,6 @@ Trao's specification requires that:
 
 Our backend enforces this invariant at the database repository layer (`kitRepository.ts`):
 ```typescript
-// All queries strictly enforce candidate ownership
 findByUser: (userId: string) => KitModel.find({ userId }).sort({ createdAt: -1 }),
 findById: (id: string, userId: string) => KitModel.findOne({ _id: id, userId }),
 delete: (id: string, userId: string) => KitModel.findOneAndDelete({ _id: id, userId }),
@@ -75,7 +74,7 @@ Following the assignment directive (*"Out of scope: Do not waste time on passwor
 
 ---
 
-## 🧠 Deep Dive 1: "The Hardest State Problem" (The Builder)
+## Deep Dive 1: "The Hardest State Problem" (The Builder)
 
 ### The Problem
 In **The Builder**, candidates customize their prep kit: editing question text, tuning answer outlines, reordering items, or pinning must-review questions. When the candidate subsequently clicks **"Regenerate Technical"** (`POST /api/kit/:id/regenerate` with `{ category: 'technical' }`), naive AI systems wipe out manual edits or duplicate IDs.
@@ -84,15 +83,15 @@ In **The Builder**, candidates customize their prep kit: editing question text, 
 Every question entity in the schema carries explicit provenance flags:
 ```typescript
 export interface Question {
-  id: string;                      // Stable sequential ID (e.g. 'q1', 'q2')
-  requirement_ids: string[];       // Foreign key references to role.requirements
+  id: string;
+  requirement_ids: string[];
   category: 'technical' | 'system-design' | 'behavioural' | 'company-fit';
   prompt: string;
   answer_outline: string;
-  difficulty: 1 | 2 | 3;           // Strictly integer 1, 2, or 3
-  isEdited?: boolean;              // Set to true if candidate customized prompt/outline
-  isPinned?: boolean;              // Set to true if candidate locked/pinned the card
-  isCustom?: boolean;              // Set to true if user hand-authored the card
+  difficulty: 1 | 2 | 3;
+  isEdited?: boolean;
+  isPinned?: boolean;
+  isCustom?: boolean;
 }
 ```
 
@@ -125,7 +124,7 @@ Existing Question Bank
 
 ---
 
-## ⏱️ Deep Dive 2: Deterministic Arithmetic Schedule Engine
+## Deep Dive 2: Deterministic Arithmetic Schedule Engine
 
 ### Why NOT an LLM for Scheduling?
 LLMs consistently fail at temporal arithmetic: they produce float minutes (e.g., $18.33$ mins), skip days, drift from the requested duration (producing 4 or 6 days instead of 5), or miss critical requirements. 
@@ -157,7 +156,7 @@ Every entry in `schedule.days[i].question_ids` is verified to exist in `kit.ques
 
 ---
 
-## 🔄 Deep Dive 3: The Second Pass Coverage Feedback Loop
+## Deep Dive 3: The Second Pass Coverage Feedback Loop
 
 ### The Problem
 During LLM question generation, models frequently suffer from **coverage blindness** — generating 10 questions for common skills (e.g., React/Node) while completely overlooking niche mandatory qualifications (e.g., Kafka, Kubernetes, or HIPAA compliance).
@@ -197,7 +196,7 @@ If $\text{Gaps} \neq \emptyset$, `SecondPassRunner`:
 
 ---
 
-## 🔀 Deep Dive 4: Intelligent Model Routing & Multi-Provider Architecture
+## Deep Dive 4: Intelligent Model Routing & Multi-Provider Architecture
 
 Trao.ai features a unified, enterprise-grade **Multi-Provider LLM SDK** with **Task-Based Routing** and **Zero-Downtime Resilient Failover**.
 
@@ -240,7 +239,7 @@ Every provider implements an in-memory `RateLimiter`:
 
 ---
 
-## 🛡️ Deep Dive 5: Autonomous Web Crawler & SSRF Defense
+## Deep Dive 5: Autonomous Web Crawler & SSRF Defense
 
 The crawler pipeline (`CompanyCrawler`) extracts real-world company culture, hiring philosophy, and interview feedback:
 
@@ -261,7 +260,7 @@ The crawler pipeline (`CompanyCrawler`) extracts real-world company culture, hir
 
 ---
 
-## 🚀 Full 9-Stage Sequenced Pipeline
+## Full 9-Stage Sequenced Pipeline
 
 ```
 [Job Description + Target URL + Days Available]
@@ -299,7 +298,7 @@ The crawler pipeline (`CompanyCrawler`) extracts real-world company culture, hir
 
 ---
 
-## 🔌 API Reference & Endpoint Contracts
+## API Reference & Endpoint Contracts
 
 ### 1. Authentication Endpoints (`/api/user`)
 
@@ -307,14 +306,17 @@ All candidate registration and authentication endpoints return standard JSON env
 
 #### `POST /api/user/signup`
 Creates a new candidate account.
+
+Request:
 ```json
-// Request Body
 {
   "email": "candidate@example.com",
   "password": "SecurePassword123!"
 }
+```
 
-// Success Response (201 Created)
+Response (`201 Created`):
+```json
 {
   "status": true,
   "message": "User registered successfully",
@@ -330,14 +332,17 @@ Creates a new candidate account.
 
 #### `POST /api/user/login`
 Authenticates an existing candidate and yields an access JWT.
+
+Request:
 ```json
-// Request Body
 {
   "email": "candidate@example.com",
   "password": "SecurePassword123!"
 }
+```
 
-// Success Response (200 OK)
+Response (`200 OK`):
+```json
 {
   "status": true,
   "message": "Login successful",
@@ -353,11 +358,11 @@ Authenticates an existing candidate and yields an access JWT.
 
 #### `GET /api/user/me`
 Protected by `authMiddleware`. Verifies token validity and returns candidate profile.
-```json
-// Headers
-// Authorization: Bearer <JWT_TOKEN>
 
-// Success Response (200 OK)
+Header: `Authorization: Bearer <JWT_TOKEN>`
+
+Response (`200 OK`):
+```json
 {
   "status": true,
   "message": "Profile retrieved successfully",
@@ -372,9 +377,15 @@ Protected by `authMiddleware`. Verifies token validity and returns candidate pro
 
 #### `POST /api/user/logout`
 Terminates user session client-side and acknowledges logout.
+
+Header: `Authorization: Bearer <JWT_TOKEN>`
+
+Response (`200 OK`):
 ```json
-// Headers: Authorization: Bearer <JWT_TOKEN>
-// Response (200 OK): { "status": true, "message": "Logged out successfully" }
+{
+  "status": true,
+  "message": "Logged out successfully"
+}
 ```
 
 ---
@@ -427,7 +438,7 @@ Exports the kit in Appendix A JSON or formatted Markdown for offline study.
 
 ---
 
-## 🤖 Headless Batch Evaluation CLI (Appendix B)
+## Headless Batch Evaluation CLI (Appendix B)
 
 As specified in **Section 9 & Appendix B**, the backend includes a standalone batch evaluation entry point to test pipeline performance on batch cases without running the HTTP server.
 
@@ -448,7 +459,7 @@ npm run evaluate -- --input tests/fixtures/sample_cases.json --output dist/evalu
 
 ---
 
-## 🧪 Automated Test Suite (45 Passing Tests)
+## Automated Test Suite (45 Passing Tests)
 
 The backend features a comprehensive test suite testing every mathematical, crawler, and schema invariant:
 
@@ -458,51 +469,51 @@ npm test
 
 ### Test Suite Breakdown
 ```
-▶ AppendixAValidator (Structure & Invariant Validation)
-  ✔ validates a completely conforming Appendix A kit
-  ✔ fails if top-level section is missing
-  ✔ fails if difficulty is not integer 1, 2, or 3
-  ✔ fails if minutes is not an integer
-  ✔ fails if schedule days count does not match days_available
-  ✔ fails if schedule refers to a non-existent question ID
-  ✔ fails if a question references a non-existent requirement ID
-  ✔ fails if requirement IDs are duplicated
+[Suite] AppendixAValidator (Structure & Invariant Validation)
+  ok - validates a completely conforming Appendix A kit
+  ok - fails if top-level section is missing
+  ok - fails if difficulty is not integer 1, 2, or 3
+  ok - fails if minutes is not an integer
+  ok - fails if schedule days count does not match days_available
+  ok - fails if schedule refers to a non-existent question ID
+  ok - fails if a question references a non-existent requirement ID
+  ok - fails if requirement IDs are duplicated
 
-▶ CoverageEngine (Deterministic Coverage Checking)
-  ✔ detects uncovered must-have requirements when gaps exist
-  ✔ reports 100% must-have complete coverage when all must-haves have questions
-  ✔ returns specific missing requirements to drive the second pass LLM step
-  ✔ generates accurate metrics in diagnostic report
+[Suite] CoverageEngine (Deterministic Coverage Checking)
+  ok - detects uncovered must-have requirements when gaps exist
+  ok - reports 100% must-have complete coverage when all must-haves have questions
+  ok - returns specific missing requirements to drive the second pass LLM step
+  ok - generates accurate metrics in diagnostic report
 
-▶ Crawler & Scraping Pipeline
-  ✔ validates and normalizes valid public URLs
-  ✔ blocks private IPs and loopback (SSRF protection)
-  ✔ ranks hiring and interview links with highest priority
-  ✔ cleans HTML text, strips scripts/styles/svg, and unescapes entities
-  ✔ gracefully handles unreachable or 404 company URLs without failing
+[Suite] Crawler & Scraping Pipeline
+  ok - validates and normalizes valid public URLs
+  ok - blocks private IPs and loopback (SSRF protection)
+  ok - ranks hiring and interview links with highest priority
+  ok - cleans HTML text, strips scripts/styles/svg, and unescapes entities
+  ok - gracefully handles unreachable or 404 company URLs without failing
 
-▶ Intelligent ModelRouter & Multi-Provider Architecture
-  ✔ initializes all configured providers (Gemini, Groq, OpenAI, OpenRouter, Mock)
-  ✔ routes tasks intelligently to optimal provider based on task profile
-  ✔ honors preferredProvider override when requested in options
-  ✔ generates status report accurately with provider models and route maps
-  ✔ falls back resiliently when mock is forced
-  ✔ provides task-scoped adapters via router.forTask()
+[Suite] Intelligent ModelRouter & Multi-Provider Architecture
+  ok - initializes all configured providers (Gemini, Groq, OpenAI, OpenRouter, Mock)
+  ok - routes tasks intelligently to optimal provider based on task profile
+  ok - honors preferredProvider override when requested in options
+  ok - generates status report accurately with provider models and route maps
+  ok - falls back resiliently when mock is forced
+  ok - provides task-scoped adapters via router.forTask()
 
-▶ ScheduleEngine (Deterministic Arithmetic)
-  ✔ allocates exactly N days as requested (5 days)
-  ✔ handles 1-day edge case correctly
-  ✔ handles 60-day edge case correctly
-  ✔ places harder and higher-priority questions earlier in schedule
-  ✔ strictly produces integer minutes (no floats)
-  ✔ ensures every scheduled question_ids entry refers to an existing question
+[Suite] ScheduleEngine (Deterministic Arithmetic)
+  ok - allocates exactly N days as requested (5 days)
+  ok - handles 1-day edge case correctly
+  ok - handles 60-day edge case correctly
+  ok - places harder and higher-priority questions earlier in schedule
+  ok - strictly produces integer minutes (no floats)
+  ok - ensures every scheduled question_ids entry refers to an existing question
 
-ℹ tests 45 | pass 45 | fail 0 (100% passing)
+Tests: 45 passed, 45 total (100% passing)
 ```
 
 ---
 
-## 💻 Quick Start & Local Setup
+## Quick Start & Local Setup
 
 ### 1. Prerequisites
 - **Node.js**: v18.0.0 or higher
@@ -526,13 +537,10 @@ MONGODB_URI=mongodb://localhost:27017/trao_ai
 CORS_ORIGIN=http://localhost:3000
 JWT_SECRET=your_jwt_secret_key
 
-# Add at least one key (Gemini is free at https://aistudio.google.com/apikey):
 GEMINI_API_KEY=your_gemini_key_here
 GROQ_API_KEY=your_groq_key_here
 OPENAI_API_KEY=your_openai_key_here
 OPENROUTER_API_KEY=your_openrouter_key_here
-
-# Intelligent Routing (Defaults to smart task assignments)
 DEFAULT_LLM_PROVIDER=gemini
 ```
 
@@ -540,7 +548,7 @@ DEFAULT_LLM_PROVIDER=gemini
 ```bash
 npm run dev
 ```
-Server runs with live-reload on **`http://localhost:5000`**.
+Server runs with live-reload on `http://localhost:5000`.
 
 ### 5. Build for Production
 ```bash
