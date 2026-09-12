@@ -9,11 +9,39 @@ import { successResponse } from "./utils/apiResponse";
 export const createApp = (): Application => {
   const app = express();
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+  );
+
+  const rawOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+  const configuredOrigins = rawOrigin
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+
   app.use(
     cors({
-      origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+
+        const cleanOrigin = origin.replace(/\/$/, "");
+        const isAllowed =
+          configuredOrigins.includes(cleanOrigin) ||
+          cleanOrigin.endsWith(".vercel.app") ||
+          cleanOrigin.includes("localhost") ||
+          cleanOrigin.includes("127.0.0.1");
+
+        if (isAllowed) {
+          return callback(null, cleanOrigin);
+        }
+        return callback(null, cleanOrigin);
+      },
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     })
   );
   app.use(express.json());
