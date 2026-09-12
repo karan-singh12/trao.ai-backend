@@ -47,12 +47,14 @@ export interface KitSource {
   jd_chars: number;
   researched_at: string;
   pages_used: string[];
+  logo_url?: string;
 }
 
 export interface CompanyBrief {
   summary: string;
   what_they_do: string;
   sources: string[];
+  logo_url?: string;
 }
 
 export interface RoleInfo {
